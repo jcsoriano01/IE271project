@@ -35,6 +35,8 @@ CONTENT_STYLE = {
     "padding":"1em 1em"
 }
 
+server = app.server
+
 app.layout = html.Div(
     [
         #Location variable -- contains details about the url
