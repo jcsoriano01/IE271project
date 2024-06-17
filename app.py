@@ -7,6 +7,9 @@ import logging
 #Application obhect (stored in app variable), along with CSS stylesheets
 app = dash.Dash(__name__, external_stylesheets=["assets/bootstrap.css"])
 
+# Expose the server attribute for Gunicorn
+server = app.server
+
 #Supress callbacks when input elements enter the layout
 app.config.suppress_callback_exceptions = True
 
