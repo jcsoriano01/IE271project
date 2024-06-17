@@ -1,0 +1,304 @@
+from dash import dcc
+from dash import html
+import dash_bootstrap_components as dbc
+import dash
+from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
+import pandas as pd
+
+from app import app
+from apps import dbconnect as db
+from datetime import datetime
+
+layout = html.Div(
+    [
+        dbc.Modal(
+            [
+                dbc.ModalHeader(dbc.ModalTitle("Success")),
+                dbc.ModalBody("The selected record has been successfully approved."),
+                dbc.ModalFooter(
+                    dbc.Button("Close", id="close",className="ms-auto",n_clicks =0)
+                ),
+            ],
+            id = "modal",
+            is_open = False,
+        )
+        ,dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        dbc.Card(
+                            [
+                                dbc.CardHeader(
+                                    [html.H5("For Approval Count", style={'margin': 0})],
+                                    style={'display': 'flex', 'align-items': 'center', 'justify-content': 'center', 'padding': '10px'}
+                                ),
+                                dbc.CardBody(
+                                    [
+                                        html.Div(
+                                            "The number of for approval will be shown here",
+                                            id='for_approval_count'
+                                        )
+                                    ]
+                                )
+                            ],
+                            style={"width": "18rem"},
+                        ),
+                        html.Br(),
+                        dbc.Card(
+                            [
+                                dbc.CardHeader(
+                                    [html.H5("Service Level", style={'margin': 0})],
+                                    style={'display': 'flex', 'align-items': 'center', 'justify-content': 'center', 'padding': '10px'}
+                                ),
+                                dbc.CardBody(
+                                    [
+                                        html.Div(
+                                            "Service Level Agreement",
+                                            id='for_approval_sla'
+                                        )
+                                    ]
+                                )
+                            ],
+                            style={"width": "18rem"},
+                        )
+                    ],
+                    width=3
+                ),
+                dbc.Col(
+                    [
+                        dbc.Card(
+                            [
+                                dbc.CardHeader(
+                                    [html.H5("For Approval Records", style={'margin': 0})],
+                                    style={'display': 'flex', 'align-items': 'center', 'justify-content': 'center', 'padding': '10px'}
+                                ),
+                                dbc.CardBody(
+                                    [
+                                        html.Div(
+                                            [
+                                                dbc.Form(
+                                                    dbc.Row(
+                                                        [
+                                                            #dbc.Label('User ID', width="auto"),
+                                                            dbc.Col(
+                                                                dbc.Input(type='text', id='customers_search_user_id', placeholder="Enter User ID"),
+                                                                className='me-3'
+                                                            ),
+                                                            #dbc.Label("Last Name", width="auto"),
+                                                            dbc.Col(
+                                                                dbc.Input(type="text", id='customers_search_last_name', placeholder="Enter Last Name"),
+                                                                className="me-3"
+                                                            ),
+                                                            #dbc.Label("Middle Name", width="auto"),
+                                                            dbc.Col(
+                                                                dbc.Input(type="text", id='customers_search_middle_name', placeholder="Enter Middle Name"),
+                                                                className="me-3"
+                                                            ),
+                                                            #dbc.Label("First Name", width="auto"),
+                                                            dbc.Col(
+                                                                dbc.Input(type="text", id='customers_search_first_name', placeholder="Enter First Name"),
+                                                                className="me-3"
+                                                            ),
+                                                            dbc.Col(dbc.Button("Search", color="primary", n_clicks=0, id='customers_search_btn'), width="auto")
+                                                        ],
+                                                        className="g-2"
+                                                    )
+                                                )
+                                            ]
+                                        ),
+                                        html.Hr(),
+                                        html.Br(),
+                                        html.Div(
+                                            "Result of Search will be shown here",
+                                            id='user_record_approval'
+                                        )
+                                    ]
+                                )
+                            ]
+                        )
+                    ]
+                )
+            ],
+            # style={
+            #     'font-family': 'Georgia'
+            # }
+        )
+    ]
+)
+
+@app.callback(
+    [
+        Output('user_record_approval','children'),
+    ],
+    [
+        Input('url','pathname')
+        ,Input('customers_search_btn','n_clicks')
+    ],
+    [
+        State('customers_search_user_id', 'value')
+        ,State('customers_search_last_name', 'value')
+        ,State('customers_search_middle_name', 'value')
+        ,State('customers_search_first_name', 'value')
+    ]
+)
+def customers_loadlist(pathname, user_id, last_name, middle_name, first_name): 
+    if pathname == '/customer_registration/for_approval':
+        sql = """
+            SELECT
+                a.created_date
+                ,a.firstname
+                ,a.middlename
+                ,a.lastname
+                ,b.registration_no
+                ,EXTRACT(DAY FROM NOW()-created_date) AS age
+                ,a.user_id
+            FROM users a
+            JOIN registration b
+            ON a.user_id = b.customer_id
+            JOIN registration_status c
+            ON b.registration_status_id = c.registration_status_id
+            WHERE is_active = true
+            AND b.registration_status_id = 1
+            """
+        values = []
+        
+
+        if user_id:
+            sql += " AND a.user_id = %s"
+            values.append(f"{user_id}")
+        if first_name:
+            sql += " AND a.firstname ILIKE %s"
+            values.append(f"%{first_name}%")
+        if middle_name:
+            sql += " AND a.middlename ILIKE %s"
+            values.append(f"%{middle_name}%")
+        if last_name:
+            sql += " AND a.lastname ILIKE %s"
+            values.append(f"%{last_name}%")
+
+        cols = [
+            'created_date', 'firstname', 'middlename','lastname','registration_no','created_date','user_id'
+        ]
+
+        df = db.querydatafromdatabase(sql,values,cols)
+
+        if df.shape:
+            buttons = []
+            for idx, user_id in enumerate(df['user_id']):
+            #for user_id in df['firstname']:
+                buttons.append(
+                    dbc.Button(
+                        'Approve'
+                        ,id = {'type':'approve_button', 'index':user_id}
+                        ,size = 'sm'
+                        ,color = 'info'
+                        ,className = 'me-1'
+                        ,style = {'text-align':'center'}
+                    )
+                )
+            
+            df['Action'] = buttons
+
+            table = dbc.Table.from_dataframe(df, striped=True, bordered=True, hover = True, size = 'sm')
+            return [table]
+        else:
+            return ["No records"]
+    else:
+        raise PreventUpdate
+
+@app.callback(
+    [
+        Output('user_record_approval','children')
+        ,Output('modal','is_open')
+    ],
+    [Input({'type':'approve_button','index':dash.dependencies.ALL}, 'n_clicks')],
+    [
+        State('customers_search_user_id','value')
+        ,State('customers_search_last_name','value')
+        ,State('customers_search_middle_name','value')
+        ,State('customers_search_first_name', 'value')
+    ]
+)
+def update_registration_status(n_clicks, user_id, last_name, middle_name, first_name):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        user_id_to_approve = eval(button_id)['index']
+
+        #update the registration status id in the database
+        sql_update = """
+            UPDATE registration
+            SET registration_status_id = 2
+            WHERE customer_id = %s
+        """
+
+        db.modifydatabase(sql_update,[user_id_to_approve])
+
+        sql = """
+            SELECT
+                a.created_date
+                ,a.first_name
+                ,b.middle_name
+                ,a.last_name
+                ,b.registration_no
+                ,EXTRACT(DAY FROM NOW() - created_date) AS age
+                ,a.user_id
+            FROM users a
+            JOIN registration b ON a.user_id = b.customer_id
+            JOIN registration_status c ON b.registration_status_id = c.registration_status_id
+            WHERE is_active = true
+            AND b.registration_status_id = 1
+        """
+        values = []
+
+        if user_id:
+            sql += " AND a.user_id = %s"
+            values.append(f"{user_id}")
+        if first_name:
+            sql += " AND a.firstname ILIKE %s"
+            values.append(f"%{first_name}%")
+        if middle_name:
+            sql += " AND a.middlename ILIKE %s"
+            values.append(f"%{middle_name}%")
+        if last_name:
+            sql += " AND a.lastname ILIKE %s"
+            values.append(f"%{last_name}%")
+
+        cols = [
+            'created_date', 'firstname', 'middlename','lastname','registration_no','created_date','user_id'
+        ]
+
+        df = db.querydatafromdatabase(sql, values, cols)
+
+        if df.shape:
+            buttons = []
+            for idx, user_id in enumerate(df['user_id']):
+                buttons.append(
+                    dbc.Button(
+                        'Approve'
+                        ,id = {'type':'approve_button', 'index':user_id}
+                        ,size = 'sm'
+                        ,color = 'info'
+                        ,className='me-1'
+                        ,style = {'text-align':'center'}
+                    )
+                )
+            df['Action'] = buttons
+
+            table = dbc.Table.from_dataframe(df, striped=True, bordered=True, hover=True, size='sm')
+            return [table, True]  # Open modal
+        else:
+            return ["No records", True]  # Open modal if no records found
+        
+@app.callback(
+    Output('modal','is_open')
+    ,[Input('close','n_clicks')]
+    ,[State('modal','is_open')]
+)
+def toggle_modal(n1, is_open):
+    if n1:
+        return not is_open
+    return is_open
