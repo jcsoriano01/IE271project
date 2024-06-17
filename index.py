@@ -140,7 +140,10 @@ def displaypage(pathname, sessionlogout, userid):
     else:
         raise PreventUpdate
         
+import os
+
 if __name__ == '__main__':
     webbrowser.open('http://127.0.0.1:8050/', new=0, autoraise=True)
-    app.run_server(debug=True)
+    # app.run_server(debug=True)
+    app.run_server(debug=True, port=int(os.environ.get('PORT', 8050)))
 
