@@ -35,7 +35,7 @@ CONTENT_STYLE = {
     "padding":"1em 1em"
 }
 
-# server = app.server
+server = app.server
 
 app.layout = html.Div(
     [
