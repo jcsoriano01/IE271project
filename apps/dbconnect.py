@@ -1,15 +1,20 @@
 import psycopg2
 import pandas as pd
+import os
 
 def getdblocation():
     #contains DB credentials
-    db = psycopg2.connect(
-        host = 'localhost',
-        database = 'ezparkdb',
-        user = 'postgres',
-        port = 5432,
-        password = '090310'
-    )
+    # LOCAL
+    # db = psycopg2.connect(
+    #     host = 'localhost',
+    #     database = 'ezparkdb',
+    #     user = 'postgres',
+    #     port = 5432,
+    #     password = '090310'
+    # )
+    # REMOTE
+    DATABASE_URL = os.environ['DATABASE_URL']
+    db = psycopg2.connect(DATABASE_URL, sslmode='require')
     return db
 
 def modifydatabase(sql,values):
