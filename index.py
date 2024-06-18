@@ -1,4 +1,4 @@
-#Dash related dependencies
+# Dash related dependencies
 from dash import dcc
 from dash import html
 import dash_bootstrap_components as dbc
@@ -6,10 +6,10 @@ import dash
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-#To Open Browser Upon Running Your App
-import webbrowser
-
+# Import the app instance
 from app import app
+
+# Importing the layout modules
 from apps import commonmodules as cm
 from apps import home
 from apps import login
@@ -28,56 +28,43 @@ from apps.customer_information import customer_information_home as cih
 from apps.customer_information import customer_information_view as civ
 from apps.reports import reports_view as rv
 
+# Styling for content
 CONTENT_STYLE = {
-    "margin-top":"1em",
-    "margin-left":"1em",
-    "margin-right":"1em",
-    "padding":"1em 1em"
+    "margin-top": "1em",
+    "margin-left": "1em",
+    "margin-right": "1em",
+    "padding": "1em 1em"
 }
 
+# Defining the layout
 app.layout = html.Div(
     [
-        #Location variable -- contains details about the url
         dcc.Location(id='url', refresh=True),
-
-        #LOGIN DATA
-        # 1) logout indicator, storage_type = 'session' means that data will be retained
-        # until browser/tab is closed
-        dcc.Store(id = 'sessionlogout', data = True, storage_type = 'session'),
-
-        # 2) current_user_id = stores user_id
-        dcc.Store(id = 'currentuserid', data = -1, storage_type = 'session'),
-
-        # 3) currentrole = stores the role
-        dcc.Store(id = 'currentrole', data = -1, storage_type = 'session'),
-
-        #Adding the navbar
-        html.Div(
-            cm.navbar,
-            id = 'navbar_div'
-        ),
-
-        #Page Content -- Div that contains the page layout
-        html.Div(id = 'page-content',style =CONTENT_STYLE),
+        dcc.Store(id='sessionlogout', data=True, storage_type='session'),
+        dcc.Store(id='currentuserid', data=-1, storage_type='session'),
+        dcc.Store(id='currentrole', data=-1, storage_type='session'),
+        html.Div(cm.navbar, id='navbar_div'),
+        html.Div(id='page-content', style=CONTENT_STYLE),
     ]
 )
 
+# Callback to handle page navigation and user sessions
 @app.callback(
     [
-        Output('page-content','children'),
-        Output('sessionlogout','data'),
+        Output('page-content', 'children'),
+        Output('sessionlogout', 'data'),
         Output('navbar_div', 'className'),
     ],
     [
-        Input('url','pathname')
+        Input('url', 'pathname')
     ],
     [
-        State('sessionlogout','data'),
-        State('currentuserid','data'),
+        State('sessionlogout', 'data'),
+        State('currentuserid', 'data'),
     ]
 )
 def displaypage(pathname, sessionlogout, userid):
-    ctx = dash.callback_context #Used to determine what triggered the callback
+    ctx = dash.callback_context  # Used to determine what triggered the callback
     if ctx.triggered:
         eventid = ctx.triggered[0]['prop_id'].split('.')[0]
 
@@ -99,13 +86,11 @@ def displaypage(pathname, sessionlogout, userid):
                     returnlayout = ch.layout,
                 elif pathname == '/customer_registration/new':
                     returnlayout = cn.layout,
-                #returnlayout = '/customers_registration/new',
                 elif pathname == '/customer_registration/edit':
                     returnlayout = ce.layout,
                 elif pathname == '/customer_registration/for_approval':
                     returnlayout = ca.layout,
                 elif pathname == '/advanced_booking/new':
-                #returnlayout = abn.layout,
                     returnlayout = abn.layout,
                 elif pathname == '/advanced_booking/new/book':
                     returnlayout = abb.layout,
@@ -139,11 +124,6 @@ def displaypage(pathname, sessionlogout, userid):
             raise PreventUpdate
     else:
         raise PreventUpdate
-        
-import os
 
 if __name__ == '__main__':
-    # webbrowser.open('http://127.0.0.1:8050/', new=0, autoraise=True)
     app.run_server(debug=False)
-    # app.run_server(debug=True, port=int(os.environ.get('PORT', 8050)))
-
